@@ -1,0 +1,54 @@
+# Monk Skin Tone Scale Mapping
+# Maps ITA (Individual Typology Angle) ranges to Monk Skin Tone categories (MST-1 to MST-10).
+# Colors are in BGR format for OpenCV.
+
+mapping:
+  - category: "MST-1"
+    min_ita: 55.0
+    max_ita: 90.0
+    color: [228, 237, 246]
+
+  - category: "MST-2"
+    min_ita: 41.0
+    max_ita: 55.0
+    color: [219, 231, 243]
+
+  - category: "MST-3"
+    min_ita: 28.0
+    max_ita: 41.0
+    color: [208, 234, 247]
+
+  - category: "MST-4"
+    min_ita: 19.0
+    max_ita: 28.0
+    color: [186, 218, 234]
+
+  - category: "MST-5"
+    min_ita: 10.0
+    max_ita: 19.0
+    color: [150, 189, 215]
+
+  - category: "MST-6"
+    min_ita: 3.0
+    max_ita: 10.0
+    color: [86, 126, 160]
+
+  - category: "MST-7"
+    min_ita: -7.0
+    max_ita: 3.0
+    color: [67, 92, 130]
+
+  - category: "MST-8"
+    min_ita: -16.0
+    max_ita: -7.0
+    color: [52, 65, 96]
+
+  - category: "MST-9"
+    min_ita: -27.0
+    max_ita: -16.0
+    color: [42, 49, 58]
+
+  - category: "MST-10"
+    min_ita: -90.0
+    max_ita: -27.0
+    color: [32, 36, 41]
