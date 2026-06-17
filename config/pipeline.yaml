@@ -1,0 +1,10 @@
+detector_backend: mediapipe  # mtcnn or mediapipe
+lab_statistic: median    # median or mean
+
+highlight_removal:
+  enabled: true
+  percentile: 95
+
+beard_filter:
+  enabled: true
+  percentile: 10

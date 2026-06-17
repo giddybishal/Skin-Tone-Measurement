@@ -2,10 +2,11 @@ import logging
 import numpy as np
 from facenet_pytorch import MTCNN
 from PIL import Image
+from .base_detector import FaceDetectorBase
 
 logger = logging.getLogger(__name__)
 
-class FaceDetector:
+class MTCNNDetector(FaceDetectorBase):
     def __init__(self, use_gpu: bool = False):
         """
         Initializes the face detector using MTCNN from facenet-pytorch.
@@ -27,7 +28,7 @@ class FaceDetector:
             dict containing 'bbox', 'landmarks' (as a numpy array (5,2)), and 'confidence', 
             or None if no face found.
         """
-        logger.info("Detecting face...")
+        logger.info("Detecting face with MTCNN...")
         
         # MTCNN works best with RGB PIL images
         # OpenCV loads in BGR, so we convert BGR -> RGB -> PIL

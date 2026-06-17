@@ -23,7 +23,7 @@ class Visualizer:
                     colors[entry['category']] = tuple(entry['color'])
         return colors
 
-    def save_visualizations(self, filename, original_img, bbox, regions, results):
+    def save_visualizations(self, filename, original_img, bbox, regions, results, backend_name="mtcnn", landmarks=None):
         """
         Generates and saves the required visualizations.
         """
@@ -100,6 +100,14 @@ class Visualizer:
             
             legend_y += 40
             
+        # Draw detector backend
+        cv2.putText(annotated_img, f"Detector: {backend_name.capitalize()}", (legend_x, legend_y), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+        
+        # Overlay MediaPipe Landmarks if applicable
+        if backend_name == 'mediapipe' and landmarks is not None:
+            for (x, y) in landmarks:
+                cv2.circle(annotated_img, (int(x), int(y)), 1, (0, 255, 0), -1)
+            
         annotated_path = os.path.join(img_output_dir, "annotated.jpg")
         cv2.imwrite(annotated_path, annotated_img)
         
@@ -129,3 +137,35 @@ class Visualizer:
         
         debug_path = os.path.join(debug_dir, f"{base_name}_parsing.jpg")
         cv2.imwrite(debug_path, full_debug)
+
+    def save_landmarks_debug(self, filename, image, landmarks):
+        """
+        Saves a debug image with landmarks overlaid.
+        """
+        if landmarks is None:
+            return
+            
+        base_name = os.path.splitext(filename)[0]
+        debug_dir = os.path.join(self.output_dir, '..', 'debug_landmarks')
+        os.makedirs(debug_dir, exist_ok=True)
+        
+        debug_img = image.copy()
+        for (x, y) in landmarks:
+            cv2.circle(debug_img, (int(x), int(y)), 1, (0, 255, 0), -1)
+            
+        debug_path = os.path.normpath(os.path.join(debug_dir, f"{base_name}_landmarks.jpg"))
+        cv2.imwrite(debug_path, debug_img)
+
+    def save_region_masks(self, filename, regions):
+        """
+        Saves binary region masks to the debug_masks folder.
+        """
+        base_name = os.path.splitext(filename)[0]
+        debug_dir = os.path.join(self.output_dir, '..', 'debug_masks')
+        os.makedirs(debug_dir, exist_ok=True)
+        
+        for region_name, mask in regions.items():
+            # Convert boolean mask to uint8 255
+            bin_mask = (mask.astype(np.uint8) * 255)
+            mask_path = os.path.normpath(os.path.join(debug_dir, f"{base_name}_{region_name}_mask.png"))
+            cv2.imwrite(mask_path, bin_mask)
