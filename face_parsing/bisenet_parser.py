@@ -19,9 +19,13 @@ except ImportError:
     logger.error("Could not import BiSeNet. Ensure 'zllrunning/face-parsing.PyTorch' is cloned into 'bisenet_repo'.")
 
 class FaceParser:
-    def __init__(self, use_gpu: bool = False):
+    def __init__(self, use_gpu: bool = False, weight_path: str = None):
         """
         Initializes the BiSeNet Face Parser.
+
+        Args:
+            use_gpu: Whether to use GPU acceleration.
+            weight_path: Optional path to pretrained weights. If None, uses default location.
         """
         logger.info("Initializing FaceParser (BiSeNet)")
         self.use_gpu = use_gpu and torch.cuda.is_available()
@@ -30,7 +34,8 @@ class FaceParser:
         n_classes = 19
         self.net = BiSeNet(n_classes=n_classes)
         
-        weight_path = os.path.join(bisenet_repo_path, 'res', 'cp', '79999_iter.pth')
+        if weight_path is None:
+            weight_path = os.path.join(bisenet_repo_path, 'res', 'cp', '79999_iter.pth')
         if not os.path.exists(weight_path):
             raise FileNotFoundError(f"Model weights not found at {weight_path}. Run setup.py first.")
         

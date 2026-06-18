@@ -17,4 +17,5 @@ dependencies = [
     "matplotlib>=3.7.0",
     "gdown>=4.7.0",
     "mediapipe==0.10.9",
+    "gradio>=4.0.0",
 ]

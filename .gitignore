@@ -16,3 +16,6 @@ output/
 test_images/
 google_dataset/
 aakriti_test/
+
+# Gradio
+flagged/

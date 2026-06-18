@@ -7,11 +7,20 @@ import yaml
 logger = logging.getLogger(__name__)
 
 class Visualizer:
-    def __init__(self, output_dir, config_path):
+    def __init__(self, output_dir=None, config_path=None):
         self.output_dir = output_dir
-        os.makedirs(self.output_dir, exist_ok=True)
+        if output_dir:
+            os.makedirs(self.output_dir, exist_ok=True)
         
-        self.mst_colors = self._load_colors(config_path)
+        self.mst_colors = {}
+        if config_path:
+            self.mst_colors = self._load_colors(config_path)
+
+    @classmethod
+    def create_for_service(cls, config_path):
+        """Create a Visualizer for in-memory rendering (no output directory needed)."""
+        instance = cls(output_dir=None, config_path=config_path)
+        return instance
 
     def _load_colors(self, config_path):
         colors = {}
@@ -169,3 +178,114 @@ class Visualizer:
             bin_mask = (mask.astype(np.uint8) * 255)
             mask_path = os.path.normpath(os.path.join(debug_dir, f"{base_name}_{region_name}_mask.png"))
             cv2.imwrite(mask_path, bin_mask)
+
+    # ─── In-Memory Render Methods (for Gradio / API use) ─────────────────
+
+    def render_annotated(self, original_img_bgr, bbox, regions, results,
+                         backend_name="mediapipe", landmarks=None):
+        """
+        Render annotated image with bounding box, legend, and optional landmarks.
+
+        Returns:
+            RGB numpy array suitable for Gradio display.
+        """
+        x1, y1, x2, y2 = bbox
+        annotated = original_img_bgr.copy()
+
+        # Bounding box
+        cv2.rectangle(annotated, (x1, y1), (x2, y2), (255, 255, 255), 2)
+
+        # Legend background
+        cv2.rectangle(annotated, (10, 10), (350, 20 + 40 * len(results)), (0, 0, 0), -1)
+
+        legend_x, legend_y = 20, 30
+        for region_name, res in results.items():
+            if not res:
+                continue
+            color = self.mst_colors.get(res['monk'], (255, 255, 255))
+            cv2.rectangle(annotated, (legend_x, legend_y - 15),
+                          (legend_x + 20, legend_y + 5), color, -1)
+            cv2.rectangle(annotated, (legend_x, legend_y - 15),
+                          (legend_x + 20, legend_y + 5), (255, 255, 255), 1)
+            text = f"{region_name.replace('_', ' ').title()}: {res['monk']} (ITA {res['ita']:.1f})"
+            cv2.putText(annotated, text, (legend_x + 30, legend_y),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+            legend_y += 40
+
+        cv2.putText(annotated, f"Detector: {backend_name.capitalize()}",
+                    (legend_x, legend_y), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+
+        # Landmarks overlay
+        if landmarks is not None:
+            for (x, y) in landmarks:
+                cv2.circle(annotated, (int(x), int(y)), 1, (0, 255, 0), -1)
+
+        return cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB)
+
+    def render_overlay(self, original_img_bgr, bbox, regions, results):
+        """
+        Render region overlay image with MST colors blended onto skin regions.
+
+        Returns:
+            RGB numpy array suitable for Gradio display.
+        """
+        x1, y1, x2, y2 = bbox
+        overlay = original_img_bgr.copy()
+
+        for region_name, mask in regions.items():
+            res = results.get(region_name)
+            if not res or res['monk'] not in self.mst_colors:
+                continue
+
+            color = self.mst_colors[res['monk']]
+            full_mask = np.zeros((original_img_bgr.shape[0], original_img_bgr.shape[1]), dtype=bool)
+
+            mh, mw = mask.shape
+            ch, cw = y2 - y1, x2 - x1
+
+            if mh != ch or mw != cw:
+                mask = cv2.resize(mask.astype(np.uint8), (cw, ch),
+                                  interpolation=cv2.INTER_NEAREST).astype(bool)
+            full_mask[y1:y2, x1:x2] = mask
+
+            colored = np.zeros_like(original_img_bgr)
+            colored[:] = color
+
+            alpha = 0.6
+            overlay[full_mask] = cv2.addWeighted(
+                overlay[full_mask], 1 - alpha, colored[full_mask], alpha, 0
+            )
+
+        return cv2.cvtColor(overlay, cv2.COLOR_BGR2RGB)
+
+    def render_landmarks(self, image_bgr, landmarks):
+        """
+        Render landmark debug image.
+
+        Returns:
+            RGB numpy array suitable for Gradio display, or None if no landmarks.
+        """
+        if landmarks is None:
+            return None
+
+        debug = image_bgr.copy()
+        for (x, y) in landmarks:
+            cv2.circle(debug, (int(x), int(y)), 1, (0, 255, 0), -1)
+
+        return cv2.cvtColor(debug, cv2.COLOR_BGR2RGB)
+
+    def render_region_masks(self, regions):
+        """
+        Render region masks as a list of (image, label) tuples for gr.Gallery.
+
+        Returns:
+            List of (RGB numpy array, region_name) tuples.
+        """
+        gallery_items = []
+        for region_name, mask in regions.items():
+            # Convert bool mask to visible grayscale → RGB
+            vis = (mask.astype(np.uint8) * 255)
+            vis_rgb = cv2.cvtColor(vis, cv2.COLOR_GRAY2RGB)
+            label = region_name.replace('_', ' ').title()
+            gallery_items.append((vis_rgb, label))
+        return gallery_items
