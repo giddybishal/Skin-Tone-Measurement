@@ -62,12 +62,6 @@ class ColorAnalyzer:
             # keep pixels darker than the threshold
             valid_indices &= (L_vals <= threshold)
 
-        # Beard Filter (only for jaw)
-        if region_name == 'jaw' and self.beard_cfg.get('enabled', False):
-            pct = self.beard_cfg.get('percentile', 10)
-            threshold = np.percentile(L_vals[valid_indices], pct)
-            # keep pixels brighter than the threshold
-            valid_indices &= (L_vals >= threshold)
 
         # Apply indices
         L_vals = L_vals[valid_indices]
